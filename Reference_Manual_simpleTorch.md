@@ -16,7 +16,8 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
-Imports: torch```
+Imports: torch
+```
 
 
 # `create_dataset`

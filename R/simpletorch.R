@@ -27,7 +27,7 @@ check_size_xy <- function(x,y) {
 #' @returns A list of two datasets, "training" and "validation"
 #'          (validation is NULL if val_x or val_y is not given)
 #' @export
-#' @importFrom torch dataset torch_tensor
+#' @importFrom torch dataset torch_tensor torch_float32 torch_long
 create_dataset <- function(name,train_x,train_y,
                            val_x=NULL, val_y=NULL,
                            xtype,ytype,device) {
@@ -206,3 +206,61 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
   }
   model
 }
+
+#' Do training of the neural network
+#' @param dl A dataloader of the training data
+#' @param val_dl A dataloader of the validation data
+#' @param topology Topology of the network
+#' @param optim Name of the optimizer
+#' @param loss Name of the loss function
+#' @param nepoch Number of epochs
+#' @param lr The learning rate
+#' @returns A list of the trained model, the training loss and the validation loss
+#' @export
+train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01) {
+  model <- generate_net(topology)
+  optim <- choose_optim(optim,model$parameters,lr=lr)
+  lossfunc <- choose_loss(loss)
+  train_loss <- c()
+  valid_loss <- c()
+  for (epoch in seq_len(nepoch)) {
+    cat("Epoch",epoch,"\n")
+    model$train()
+    bloss <- c()
+    iter <- dl$.iter()
+    while (TRUE) {
+      b <- iter$.next()
+      if (!is.list(b)) break
+      optim$zero_grad()
+      output <- model$forward(b$x)
+      #browser()
+      L <- lossfunc(output,torch_squeeze(b$y))
+      L$backward()
+      optim$step()
+      bloss <- c(bloss,L$item())
+      cat(".")
+    }
+    train_loss <- c(train_loss,mean(bloss))
+    cat("train_loss=",mean(bloss)," ")
+    if (!is.null(val_dl)) {
+      model$eval()
+      vloss <- c()
+      iter <- val_dl$.iter()
+      while (TRUE) {
+        b <- iter$.next()
+        if (!is.list(b)) break
+        output <- model$forward(b$x)
+        L <- lossfunc(output,torch_squeeze(b$y))
+        vloss <- c(bloss,L$item())
+        cat(".")
+      }
+      valid_loss <- c(valid_loss,mean(vloss))
+      cat("valid_loss=",mean(vloss))
+    }
+    cat("\n")
+  }
+  list(model=model,
+       train_loss=train_loss,
+       valid_loss=valid_loss)
+}
+
