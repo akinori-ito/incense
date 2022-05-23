@@ -22,7 +22,6 @@ res <- train(dl=dls$dataloader$train,
                list("linear",4,10),
                list("relu"),
                list("linear",10,3)
-               #list("softmax",2)
              ),
              optim="adam",
              loss="crossentropy",
