@@ -4,7 +4,17 @@
 \alias{train}
 \title{Do training of the neural network}
 \usage{
-train(dl, val_dl = NULL, topology, optim, loss, nepoch, lr = 0.01)
+train(
+  dl,
+  val_dl = NULL,
+  topology,
+  optim,
+  loss,
+  nepoch,
+  lr = 0.01,
+  save_model = FALSE,
+  save_filename = "model\%d.torch"
+)
 }
 \arguments{
 \item{dl}{A dataloader of the training data}
@@ -20,6 +30,10 @@ train(dl, val_dl = NULL, topology, optim, loss, nepoch, lr = 0.01)
 \item{nepoch}{Number of epochs}
 
 \item{lr}{The learning rate}
+
+\item{save_model}{If TRUE, save the models obtained at each epoch}
+
+\item{save_filename}{Template of the saved files. \%d is replaced with the epoch number}
 }
 \value{
 A list of the trained model, the training loss and the validation loss
