@@ -198,7 +198,8 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
         x <- self$ml[[i]](x)
       }
       x
-    }
+    },
+    device = device
   )
   model <- net(topology)
   if (!is.null(device)) {
@@ -215,9 +216,12 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
 #' @param loss Name of the loss function
 #' @param nepoch Number of epochs
 #' @param lr The learning rate
+#' @param save_model If TRUE, save the models obtained at each epoch
+#' @param save_filename Template of the saved files. %d is replaced with the epoch number
 #' @returns A list of the trained model, the training loss and the validation loss
 #' @export
-train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01) {
+train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
+                  save_model=FALSE,save_filename="model%d.torch") {
   model <- generate_net(topology)
   optim <- choose_optim(optim,model$parameters,lr=lr)
   lossfunc <- choose_loss(loss)
@@ -258,9 +262,27 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01) {
       cat("valid_loss=",mean(vloss))
     }
     cat("\n")
+    if (save_model) {
+      torch_save(model,sprintf(save_filename,epoch))
+    }
   }
   list(model=model,
        train_loss=train_loss,
        valid_loss=valid_loss)
 }
 
+#' Predict
+#' @param model The neural network (nn_module)
+#' @param x A matrix or torch_tensor
+#' @return An output matrix
+#' @export
+predict.nn_module <- function(model,x) {
+  if (!is.matrix(x)) {
+    x <- as.matrix(x)
+  }
+  if (!inherits(x,"torch_tensor")) {
+    x <- torch_tensor(x,dtype=torch_float32(),device=model$device)
+  }
+  y <- model$forward(x)
+  as.array(y$cpu())
+}
