@@ -1,6 +1,6 @@
 <!-- toc -->
 
-5月 23, 2022
+5月 24, 2022
 
 # DESCRIPTION
 
@@ -92,6 +92,36 @@ Argument      |Description
 `device`     |     device of the network
 
 
+# `predict.nn_module`
+
+Predict
+
+
+## Description
+
+Predict
+
+
+## Usage
+
+```r
+list(list("predict"), list("nn_module"))(model, x)
+```
+
+
+## Arguments
+
+Argument      |Description
+------------- |----------------
+`model`     |     The neural network (nn_module)
+`x`     |     A matrix or torch_tensor
+
+
+## Value
+
+An output matrix
+
+
 # `prepare_dataloader`
 
 Create dataloader from data
@@ -142,5 +172,52 @@ Argument      |Description
 
 A list of two lists; "dataloader" has two data loaders
  "train" and "validate", and "dataset" also has "train" and "validate"
+
+
+# `train`
+
+Do training of the neural network
+
+
+## Description
+
+Do training of the neural network
+
+
+## Usage
+
+```r
+train(
+  dl,
+  val_dl = NULL,
+  topology,
+  optim,
+  loss,
+  nepoch,
+  lr = 0.01,
+  save_model = FALSE,
+  save_filename = "model%d.torch"
+)
+```
+
+
+## Arguments
+
+Argument      |Description
+------------- |----------------
+`dl`     |     A dataloader of the training data
+`val_dl`     |     A dataloader of the validation data
+`topology`     |     Topology of the network
+`optim`     |     Name of the optimizer
+`loss`     |     Name of the loss function
+`nepoch`     |     Number of epochs
+`lr`     |     The learning rate
+`save_model`     |     If TRUE, save the models obtained at each epoch
+`save_filename`     |     Template of the saved files. %d is replaced with the epoch number
+
+
+## Value
+
+A list of the trained model, the training loss and the validation loss
 
 
