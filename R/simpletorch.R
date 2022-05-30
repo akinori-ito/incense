@@ -158,7 +158,9 @@ choose_net <- function(topolist) {
     "relu"=nn_relu,
     "sigmoid"=nn_sigmoid,
     "tanh"=nn_tanh,
-    "softmax"=nn_softmax
+    "softmax"=nn_softmax,
+    "flatten"=nn_flatten,
+    "unflutten"~nn_unflatten
   )
   if (is.null(arg)) {
     nnfunc()
