@@ -161,7 +161,8 @@ choose_net <- function(topolist) {
     "tanh"=torch::nn_tanh,
     "softmax"=torch::nn_softmax,
     "flatten"=torch::nn_flatten,
-    "unflutten"~torch::nn_unflatten
+    "unflutten"=torch::nn_unflatten,
+    "embedding"=torch::nn_embedding
   )
   if (is.null(arg)) {
     nnfunc()
@@ -227,12 +228,13 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
 #' @param save_filename Template of the saved files. %d is replaced with the epoch number
 #' @param check Check the dimension of the parameter and network, type of the data, etc.
 #' @param verbose Output the loss during the training
+#' @param device torch_device for training
 #' @returns A list of the trained model, the training loss and the validation loss
 #' @export
 train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
                   save_model=FALSE,save_filename="model%d.torch",
-                  check=TRUE,verbose=TRUE) {
-  model <- generate_net(topology)
+                  check=TRUE,verbose=TRUE,device=NULL) {
+  model <- generate_net(topology,device=device)
   optim <- choose_optim(optim,model$parameters,lr=lr)
   lossfunc <- choose_loss(loss)
   consistency <- get_consistency(topology)

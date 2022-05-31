@@ -301,6 +301,15 @@ get_consistency <- function(topo) {
       indim <- dim_check(dimlist,to=layer-1)
       dimlist[[layer]]$indim <- indim
       dimlist[[layer]]$outdim <- FlattenCheckerList$new(length(indim),start_dim,end_dim)
+    } else if (module_name == "embedding") { 
+      ### NOT CORRECT!!!
+      vocab <- get_value(l,2,"num_embeddings")
+      embdim <- get_value(l,3,"embedding_dim")
+      dimlist[[layer]]$indim <- c(NA,vocab)
+      dimlist[[layer]]$outdim <- CheckerList$new(
+        IdentityChecker$new(),
+        ConstChecker$new(embdim)
+      )
     } else {
       stop(paste("Module",module_name,"not supported"))
     }
