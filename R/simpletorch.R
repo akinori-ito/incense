@@ -133,6 +133,7 @@ choose_optim <- function(optim_name,params,...) {
 #' @importFrom torch nn_linear nn_conv1d nn_conv2d nn_max_pool1d nn_max_pool2d
 #'                   nn_max_unpool1d nn_max_unpool2d nn_dropout nn_dropout2d
 #'                   nn_layer_norm nn_lstm nn_relu nn_sigmoid nn_tanh nn_softmax
+#'                   nn_flatten nn_unflatten
 choose_net <- function(topolist) {
   name <- topolist[[1]]
   if (length(topolist) == 1) {
@@ -142,25 +143,25 @@ choose_net <- function(topolist) {
   }
   nnfunc <- switch(
     name,
-    "linear"=nn_linear,
-    "conv1d"=nn_conv1d,
-    "conv2d"=nn_conv2d,
-    "maxpool1d"=nn_max_pool1d,
-    "maxpool2d"=nn_max_pool2d,
-    "maxunpool1d"=nn_max_unpool1d,
-    "maxunpool2d"=nn_max_unpool2d,
-    "dropout"=nn_dropout,
-    "dropout2d"=nn_dropout2d,
-    "layernorm"=nn_layer_norm,
-    "batchnorm1d"=nn_batch_norm1d,
-    "batchnorm2d"=nn_batch_norm2d,
-    "lstm"=nn_lstm,
-    "relu"=nn_relu,
-    "sigmoid"=nn_sigmoid,
-    "tanh"=nn_tanh,
-    "softmax"=nn_softmax,
-    "flatten"=nn_flatten,
-    "unflutten"~nn_unflatten
+    "linear"=torch::nn_linear,
+    "conv1d"=torch::nn_conv1d,
+    "conv2d"=torch::nn_conv2d,
+    "maxpool1d"=torch::nn_max_pool1d,
+    "maxpool2d"=torch::nn_max_pool2d,
+    "maxunpool1d"=torch::nn_max_unpool1d,
+    "maxunpool2d"=torch::nn_max_unpool2d,
+    "dropout"=torch::nn_dropout,
+    "dropout2d"=torch::nn_dropout2d,
+    "layernorm"=torch::nn_layer_norm,
+    "batchnorm1d"=torch::nn_batch_norm1d,
+    "batchnorm2d"=torch::nn_batch_norm2d,
+    "lstm"=torch::nn_lstm,
+    "relu"=torch::nn_relu,
+    "sigmoid"=torch::nn_sigmoid,
+    "tanh"=torch::nn_tanh,
+    "softmax"=torch::nn_softmax,
+    "flatten"=torch::nn_flatten,
+    "unflutten"~torch::nn_unflatten
   )
   if (is.null(arg)) {
     nnfunc()
@@ -169,15 +170,17 @@ choose_net <- function(topolist) {
   }
 }
 
-#' @importFrom torch nn_mse_loss nn_nll_loss nn_bce_loss nn_cross_entropy_loss nn_l1_loss
+#' @importFrom torch nn_mse_loss nn_nll_loss nn_bce_loss 
+#'                   nn_cross_entropy_loss nn_l1_loss nn_kl_div_loss
 choose_loss <- function(name) {
   switch(
     name,
-    "mse"=nn_mse_loss(),
-    "nll"=nn_nll_loss(),
-    "binary_crossentropy"=nn_bce_loss(),
-    "crossentropy"=nn_cross_entropy_loss(),
-    "L1"=nn_l1_loss()
+    "mse"=torch::nn_mse_loss(),
+    "nll"=torch::nn_nll_loss(),
+    "binary_crossentropy"=torch::nn_bce_loss(),
+    "crossentropy"=torch::nn_cross_entropy_loss(),
+    "L1"=torch::nn_l1_loss(),
+    "KL"=torch::nn_kl_div_loss()
   )
 }
 
@@ -195,7 +198,7 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
       for (i in seq_along(topo)) {
         ml[[i]] <- choose_net(topo[[i]])
       }
-      self$ml <- nn_module_list(ml)
+      self$ml <- torch::nn_module_list(ml)
     },
     forward = function(x) {
       for (i in seq_along(self$ml)) {
@@ -229,6 +232,7 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
   model <- generate_net(topology)
   optim <- choose_optim(optim,model$parameters,lr=lr)
   lossfunc <- choose_loss(loss)
+  consistency <- get_consistency(topology)
   train_loss <- c()
   valid_loss <- c()
   for (epoch in seq_len(nepoch)) {
@@ -240,9 +244,12 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
       b <- iter$.next()
       if (!is.list(b)) break
       optim$zero_grad()
+      dim_check(consistency,dim(b$x))
       output <- model$forward(b$x)
       #browser()
-      L <- lossfunc(output,torch_squeeze(b$y))
+      y <- torch::torch_squeeze(b$y)
+      loss_check(loss,output,y)
+      L <- lossfunc(output,y)
       L$backward()
       optim$step()
       bloss <- c(bloss,L$item())
@@ -258,7 +265,7 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
         b <- iter$.next()
         if (!is.list(b)) break
         output <- model$forward(b$x)
-        L <- lossfunc(output,torch_squeeze(b$y))
+        L <- lossfunc(output,torch::torch_squeeze(b$y))
         vloss <- c(bloss,L$item())
         cat(".")
       }
@@ -267,7 +274,7 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
     }
     cat("\n")
     if (save_model) {
-      torch_save(model,sprintf(save_filename,epoch))
+      torch::torch_save(model,sprintf(save_filename,epoch))
     }
   }
   list(model=model,
@@ -285,7 +292,7 @@ predict.nn_module <- function(model,x) {
     x <- as.matrix(x)
   }
   if (!inherits(x,"torch_tensor")) {
-    x <- torch_tensor(x,dtype=torch_float32(),device=model$device)
+    x <- torch::torch_tensor(x,dtype=torch::torch_float32(),device=model$device)
   }
   y <- model$forward(x)
   as.array(y$cpu())
