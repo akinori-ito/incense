@@ -225,10 +225,13 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
 #' @param lr The learning rate
 #' @param save_model If TRUE, save the models obtained at each epoch
 #' @param save_filename Template of the saved files. %d is replaced with the epoch number
+#' @param check Check the dimension of the parameter and network, type of the data, etc.
+#' @param verbose Output the loss during the training
 #' @returns A list of the trained model, the training loss and the validation loss
 #' @export
 train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
-                  save_model=FALSE,save_filename="model%d.torch") {
+                  save_model=FALSE,save_filename="model%d.torch",
+                  check=TRUE,verbose=TRUE) {
   model <- generate_net(topology)
   optim <- choose_optim(optim,model$parameters,lr=lr)
   lossfunc <- choose_loss(loss)
@@ -236,7 +239,8 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
   train_loss <- c()
   valid_loss <- c()
   for (epoch in seq_len(nepoch)) {
-    cat("Epoch",epoch,"\n")
+    if (verbose)
+      cat("Epoch",epoch,"\n")
     model$train()
     bloss <- c()
     iter <- dl$.iter()
@@ -244,19 +248,22 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
       b <- iter$.next()
       if (!is.list(b)) break
       optim$zero_grad()
-      dim_check(consistency,dim(b$x))
+      if (check)
+        dim_check(consistency,dim(b$x))
       output <- model$forward(b$x)
-      #browser()
       y <- torch::torch_squeeze(b$y)
-      loss_check(loss,output,y)
+      if (check)
+        loss_check(loss,output,y)
       L <- lossfunc(output,y)
       L$backward()
       optim$step()
       bloss <- c(bloss,L$item())
-      cat(".")
+      if (verbose)
+        cat(".")
     }
     train_loss <- c(train_loss,mean(bloss))
-    cat("train_loss=",mean(bloss)," ")
+    if (verbose)
+      cat("train_loss=",mean(bloss)," ")
     if (!is.null(val_dl)) {
       model$eval()
       vloss <- c()
@@ -264,15 +271,23 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
       while (TRUE) {
         b <- iter$.next()
         if (!is.list(b)) break
+        if (check)
+          dim_check(consistency,dim(b$x))
         output <- model$forward(b$x)
-        L <- lossfunc(output,torch::torch_squeeze(b$y))
+        y <- torch::torch_squeeze(b$y)
+        if (check)
+          loss_check(loss,output,y)
+        L <- lossfunc(output,y)
         vloss <- c(bloss,L$item())
-        cat(".")
+        if (verbose)
+          cat(".")
       }
       valid_loss <- c(valid_loss,mean(vloss))
-      cat("valid_loss=",mean(vloss))
+      if (verbose)
+        cat("valid_loss=",mean(vloss))
     }
-    cat("\n")
+    if (verbose)
+      cat("\n")
     if (save_model) {
       torch::torch_save(model,sprintf(save_filename,epoch))
     }
