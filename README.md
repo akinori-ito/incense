@@ -29,6 +29,6 @@ res <- train(dl=dls$dataloader$train,
              lr=0.01
              )
 
-predict(res$model,val_data)
+predict(res$model,val_data[,1:4])
 ```
 
