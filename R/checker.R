@@ -376,6 +376,12 @@ loss_check <- function(loss,out,ref) {
   outdim <- dim(out)
   refdim <- dim(ref)
   if (loss %in% c("mse","L1","KL","binary_crossentropy")) {
+    if (outdim[length(outdim)] == 1) {
+      length(outdim) <- length(outdim)-1
+    }
+    if (refdim[length(refdim)] == 1) {
+      length(refdim) <- length(refdim)-1
+    }
     if (any(outdim != refdim)) 
       losserror("dim",loss,out,ref)
   } else if (loss %in% c("nll","crossentropy")) {
