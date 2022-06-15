@@ -13,7 +13,10 @@ train(
   nepoch,
   lr = 0.01,
   save_model = FALSE,
-  save_filename = "model\%d.torch"
+  save_filename = "model\%d.torch",
+  check = TRUE,
+  verbose = TRUE,
+  device = NULL
 )
 }
 \arguments{
@@ -34,6 +37,12 @@ train(
 \item{save_model}{If TRUE, save the models obtained at each epoch}
 
 \item{save_filename}{Template of the saved files. \%d is replaced with the epoch number}
+
+\item{check}{Check the dimension of the parameter and network, type of the data, etc.}
+
+\item{verbose}{Output the loss during the training}
+
+\item{device}{torch_device for training}
 }
 \value{
 A list of the trained model, the training loss and the validation loss
