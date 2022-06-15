@@ -1,11 +1,12 @@
-# simpleTorch
+# Incense
+
 This is a simple interface for Torch for R, which is useful when creating a relatively simple network quickly.
 
 NOTE: This library is under development.
 
 ## Example
 ```{r}
-library(simpleTorch)
+library(incense)
 data(iris)
 train_ind <- sample.int(nrow(iris),floor(nrow(iris)*0.8))
 train_data <- iris[train_ind,]
