@@ -33,7 +33,7 @@ train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
       if (!is.list(b)) break
       optim$zero_grad()
       if (check)
-        dim_check(consistency,dim(b$x))
+        dim_check(consistency,dim(b$x),verbose=verbose)
       output <- model$forward(b$x)
       y <- torch::torch_squeeze(b$y)
       if (check)
