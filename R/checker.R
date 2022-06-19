@@ -445,16 +445,16 @@ losserror <- function(errtype,loss,out,ref) {
     stop(paste("Incorrect dimension for loss calculation:",
                " loss=",loss,
                " output dimension=",outdim,
-               " target dimension=",refdim))
+               " target dimension=",refdim,"\n"))
   } else if (errtype == "type") {
     stop(paste("Incorrect type for loss calculation:",
                " loss=",loss,
                " output type=",out$dtype,
-               " target type=",ref$dtype))
+               " target type=",ref$dtype,"\n"))
   } else if (errtype == "value") {
     stop(paste("Incorrect reference value for loss calculation:",
                " loss=",loss,
-               " target values=",as.array(ref$cpu())))
+               " target values=",as.array(ref$cpu()),"\n"))
     
   }
 }
