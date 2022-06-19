@@ -12,18 +12,18 @@
 
 get_value <- function(x,pos,name,default=NULL) {
   v <- NULL
-  if (is.null(x$name)) {
+  if (pos > 0 && is.null(x$name)) {
     if (pos <= length(x)) {
       v <- x[[pos]]
     }
   } else {
-    v <- x$name
+    v <- x[[name]]
   }
   if (is.null(v)) {
     v <- default
   }
   if (is.null(v)) {
-    stop("Value for",name,"is NULL")
+    stop("Value for ",name," is NULL")
   }
   v
 }
@@ -53,7 +53,7 @@ CheckerList <- R6::R6Class(
 )
 
 IdentityChecker <- R6::R6Class(
-  classname = "Identity",
+  classname = "IdentityChecker",
   public = list(
     initialize = function() {},
     outsize = function(insize) {insize}
@@ -61,7 +61,7 @@ IdentityChecker <- R6::R6Class(
 )
 
 ConstChecker <- R6::R6Class(
-  classname = "Const",
+  classname = "ConstChecker",
   public = list(
     const = NULL,
     initialize = function(x) {
@@ -108,7 +108,7 @@ UnConvolutionChecker <- R6::R6Class(
 )
 
 FlattenCheckerList <- R6::R6Class(
-  classname = "CheckerList",
+  classname = "FlattenCheckerList",
   public = list(
     start_dim = NULL,
     end_dim = NULL,
@@ -161,6 +161,73 @@ FlattenCheckerList <- R6::R6Class(
   )
 )
 
+EmbeddingCheckerList <- R6::R6Class(
+  "EmbeddingCheckerList",
+  public = list(
+    embedding_dim = 0,
+    initialize = function(embedding_dim){
+      self$embedding_dim <- embedding_dim
+    },
+    eval = function(indim) {
+      c(indim,self$embedding_dim)
+    },
+    length = function() {3}
+  )
+)
+
+TransposeCheckerList <- R6::R6Class(
+  "TransposeCheckerList",
+  public = list(
+    dim0 = 1,
+    dim1 = 1,
+    initialize = function(dim0,dim1) {
+      self$dim0 <- dim0
+      self$dim1 <- dim1
+    },
+    eval = function(indim) {
+      if (length(indim) < self$dim0 || length(indim) < self$dim1) {
+        stop("Invalid dimension to transpose ",self$dim0,",",self$dim1,
+             ": indim=",paste(indim,sep=","))
+      }
+      tmp <- indim[self$dim0]
+      indim[self$dim0] <- indim[self$dim1]
+      indim[self$dim1] <- tmp
+      indim
+    },
+    length = function() {}
+  )
+)
+
+LSTMCheckerList <- R6::R6Class(
+  "LSTMCheckerList",
+  public=list(
+    output_dim = 0,
+    output_last = FALSE,
+    initialize = function(num_hidden,bidirectional,output_type) {
+      self$output_dim <- num_hidden
+      if (bidirectional) {
+        self$output_dim <- num_hidden*2
+      }
+      if (output_type == "last") {
+        self$output_last <- TRUE
+      }
+    },
+    eval = function(indim) {
+      if (length(indim) != 3) {
+        stop("LSTM check failed: input tensor should be 3-dimensional, but the dimension is (",
+             paste(indim,sep=","),")")
+      }
+      if (self$output_last) {
+        return(c(indim[2],self$output_dim))
+      }
+      c(indim[1],indim[2],self$output_dim)
+    },
+    length = function() {
+      if (self$output_last) return(2)
+      3
+    }
+  )
+)
 
 get_consistency <- function(topo) {
   chooseval <- function(x,n) {ifelse(length(x) < n, x[1], x[n])}
@@ -286,12 +353,8 @@ get_consistency <- function(topo) {
       if (layer == 1) {
         stop("No input dimension specified at the first layer")
       }
-      d <- dimlist[[layer-1]]$outdim
-      dimlist[[layer]]$indim <- rep(NA,d$length())
-      dimlist[[layer]]$outdim <- CheckerList$new()
-      for (i in seq_len(d$length())) {
-        dimlist[[layer]]$outdim$append(IdentityChecker$new())
-      }
+      dimlist[[layer]]$indim <- "any"
+      dimlist[[layer]]$outdim <- "through"
     } else if (module_name == "flatten") {
       start_dim <- get_value(l,2,"start_dim",1)
       end_dim <- get_value(l,3,"end_dim",-1)
@@ -302,14 +365,27 @@ get_consistency <- function(topo) {
       dimlist[[layer]]$indim <- indim
       dimlist[[layer]]$outdim <- FlattenCheckerList$new(length(indim),start_dim,end_dim)
     } else if (module_name == "embedding") { 
-      ### NOT CORRECT!!!
-      vocab <- get_value(l,2,"num_embeddings")
-      embdim <- get_value(l,3,"embedding_dim")
-      dimlist[[layer]]$indim <- c(NA,vocab)
-      dimlist[[layer]]$outdim <- CheckerList$new(
-        IdentityChecker$new(),
-        ConstChecker$new(embdim)
+      num_embeddings <- get_value(l,2,"num_embeddings")
+      embedding_dim <- get_value(l,3,"embedding_dim")
+      dimlist[[layer]]$indim <- c(NA,NA)
+      dimlist[[layer]]$outdim <- EmbeddingCheckerList$new(embedding_dim)
+    } else if (module_name == "lstm") {
+      input_size <- get_value(l,2,"input_size")
+      num_hidden <- get_value(l,3,"num_hidden")
+      bidirectional <- get_value(l,0,"bidirectional",FALSE)
+      output_type <- get_value(l,0,"output_type","last")
+      dimlist[[layer]]$indim <- c(NA,NA,input_size)
+      dimlist[[layer]]$outdim <- LSTMCheckerList$new(
+        num_hidden,bidirectional,output_type
       )
+    } else if (module_name == "transpose") {
+      if (layer == 1) {
+        stop("Do not use transpose at the first layer")
+      }
+      dim0 <- get_value(l,2,"dim0")
+      dim1 <- get_value(l,3,"dim1")
+      dimlist[[layer]]$indim <- "any"
+      dimlist[[layer]]$outdim <- TransposeCheckerList$new(dim0,dim1)
     } else {
       stop(paste("Module",module_name,"not supported"))
     }
@@ -317,6 +393,7 @@ get_consistency <- function(topo) {
   }
   dimlist
 }
+
 
 dim_unify <- function(x,y) {
   if (length(x) != length(y)) {
@@ -334,13 +411,24 @@ dim_check <- function(consistency, dimension=NULL,
   if (is.null(dimension)) dimension <- consistency[[from]]$indim
   for (i in from:min(to,length(consistency))) {
     layer <- consistency[[i]]
-    if (!dim_unify(dimension,layer$indim)) {
-      stop("Dimension inconsistency: net=",
+    if (length(layer$indim) == 1 && inherits(layer$indim,"character") &&
+        layer$indim == "any") {
+      layer$indim <- dimension
+    }
+    else if (!dim_unify(dimension,layer$indim)) {
+      stop("Dimension inconsistency at layer ",i,
+           ", name=",layer$name,
+           ": net=",
            paste(layer$indim,collapse=","),
            " check=",
            paste(dimension,collapse=","))
     }
-    ndim <- layer$outdim$eval(dimension)
+    if (length(layer$outdim) == 1 && inherits(layer$outdim,"character") &&
+        layer$outdim == "through") {
+      ndim <- dimension
+    } else {
+      ndim <- layer$outdim$eval(dimension)
+    }
     if (verbose) {
       cat("Layer",i,"(",layer$name,"):",dimension,"-> ")
       cat(ndim,"\n")
@@ -355,18 +443,18 @@ losserror <- function(errtype,loss,out,ref) {
     outdim <- dim(out)
     refdim <- dim(ref)
     stop(paste("Incorrect dimension for loss calculation:",
-               "loss=",loss,
-               "output dimension=",outdim,
-               "target dimension=",refdim))
+               " loss=",loss,
+               " output dimension=",outdim,
+               " target dimension=",refdim))
   } else if (errtype == "type") {
     stop(paste("Incorrect type for loss calculation:",
-               "loss=",loss,
-               "output type=",out$dtype,
-               "target type=",ref$dtype))
+               " loss=",loss,
+               " output type=",out$dtype,
+               " target type=",ref$dtype))
   } else if (errtype == "value") {
     stop(paste("Incorrect reference value for loss calculation:",
-               "loss=",loss,
-               "target values=",as.array(ref$cpu())))
+               " loss=",loss,
+               " target values=",as.array(ref$cpu())))
     
   }
 }
