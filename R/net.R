@@ -32,12 +32,12 @@ xlstm <- torch::nn_module(
     self$output_last <- ifelse(output_type == "last",TRUE,FALSE)
   },
   forward = function(x) {
-    y <- self$lstm(x)
+    y <- self$lstm(x)[[1]]
     if (self$output_last) {
       seqlen <- dim(y)[1]
-      y[[1]][seqlen,,]
+      y[seqlen,,]
     } else {
-      y[[1]]
+      y
     }
   }
 )
