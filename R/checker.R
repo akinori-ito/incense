@@ -438,10 +438,19 @@ dim_check <- function(consistency, dimension=NULL,
   dimension
 }
 
+dimstr <- function(x) {
+  d <- dim(x)
+  if (is.null(d)) {
+    return(as.character(length(d)))
+  } else {
+    return(paste(d,collapse=","))
+  }
+}
+
 losserror <- function(errtype,loss,out,ref) {
   if (errtype == "dim") {
-    outdim <- paste(dim(out),collapse=",")
-    refdim <- paste(dim(ref),collapse=",")
+    outdim <- dimstr(out)
+    refdim <- dimstr(ref)
     stop(paste("Incorrect dimension for loss calculation:",
                " loss=",loss,
                " output dimension=",outdim,
