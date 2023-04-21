@@ -7,7 +7,8 @@
 train(
   dl,
   val_dl = NULL,
-  topology,
+  topology = NULL,
+  model = NULL,
   optim,
   loss,
   nepoch,
@@ -25,6 +26,8 @@ train(
 \item{val_dl}{A dataloader of the validation data}
 
 \item{topology}{Topology of the network}
+
+\item{model}{model to train}
 
 \item{optim}{Name of the optimizer}
 

@@ -2,6 +2,7 @@
 #' @param dl A dataloader of the training data
 #' @param val_dl A dataloader of the validation data
 #' @param topology Topology of the network
+#' @param model model to train
 #' @param optim Name of the optimizer
 #' @param loss Name of the loss function
 #' @param nepoch Number of epochs
@@ -13,10 +14,19 @@
 #' @param device torch_device for training
 #' @returns A list of the trained model, the training loss and the validation loss
 #' @export
-train <- function(dl,val_dl=NULL,topology,optim,loss,nepoch,lr=0.01,
+train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0.01,
                   save_model=FALSE,save_filename="model%d.torch",
                   check=TRUE,verbose=TRUE,device=NULL) {
-  model <- generate_net(topology,device=device)
+  if (is.null(model)) {
+    if (is.null(topology)) {
+      stop("Specify either topology or models")
+    }
+    model <- generate_net(topology,device=device)
+  } else if (!is.null(topology)) {
+    warning("Both model and topology are given; ignoring topology")
+  } else {
+    topology <- model$topology
+  }
   optim <- choose_optim(optim,model$parameters,lr=lr)
   lossfunc <- choose_loss(loss)
   consistency <- get_consistency(topology)

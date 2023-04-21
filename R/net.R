@@ -130,3 +130,31 @@ generate_net <- function(topology,name="defaultnet",device=NULL) {
   }
   model
 }
+
+#' Cascade network
+#' @param models List of models
+#' @export
+#' @importFrom torch nn_module nn_module_list
+cascade_net <- function(models,name="casecadenet") {
+  if (length(models) == 0) {
+    stop("models should contain at least one model")
+  }
+  net <- torch::nn_module(
+    name,
+    initialize = function(models) {
+      self$ml <- torch::nn_module_list(models)
+      self$topology <-do.call(append,lapply(models,function(x){x$topology}))
+    },
+    forward = function(x) {
+      for (i in seq_along(self$ml)) {
+        layer <- self$ml[[i]]
+        x <- layer(x)
+      }
+      x
+    },
+    device=models[[1]]$device
+  )
+  model <- net(models)
+  model$to(device=model$device)
+  model
+}
