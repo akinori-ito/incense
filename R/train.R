@@ -72,7 +72,7 @@ train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0
         if (check)
           loss_check(loss,output,y)
         L <- lossfunc(output,y)
-        vloss <- c(bloss,L$item())
+        vloss <- c(vloss,L$item())
         if (verbose)
           cat(".")
       }
