@@ -57,7 +57,7 @@ train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0
     }
     train_loss <- c(train_loss,mean(bloss))
     if (verbose)
-      cat("train_loss=",mean(bloss)," ")
+      cat("\ntrain_loss=",mean(bloss),"\n")
     if (!is.null(val_dl)) {
       model$eval()
       vloss <- c()
@@ -78,7 +78,7 @@ train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0
       }
       valid_loss <- c(valid_loss,mean(vloss))
       if (verbose)
-        cat("valid_loss=",mean(vloss))
+        cat("\nvalid_loss=",mean(vloss))
     }
     if (verbose)
       cat("\n")
