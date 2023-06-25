@@ -12,11 +12,12 @@
 #' @param check Check the dimension of the parameter and network, type of the data, etc.
 #' @param verbose Output the loss during the training
 #' @param device torch_device for training
+#' @param hook hook function that is executed after every epoch, which should have three arguments: model, training dataloader, and validation dataloader
 #' @returns A list of the trained model, the training loss and the validation loss
 #' @export
 train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0.01,
                   save_model=FALSE,save_filename="model%d.torch",
-                  check=TRUE,verbose=TRUE,device=NULL) {
+                  check=TRUE,verbose=TRUE,device=NULL, hook=NULL) {
   if (is.null(model)) {
     if (is.null(topology)) {
       stop("Specify either topology or models")
@@ -85,6 +86,9 @@ train <- function(dl,val_dl=NULL,topology=NULL,model=NULL,optim,loss,nepoch,lr=0
     if (save_model) {
       torch::torch_save(model,sprintf(save_filename,epoch))
     }
+    if (!is.null(hook)) {
+      hook(model,dl,val_dl)
+    } 
   }
   list(model=model,
        train_loss=train_loss,
