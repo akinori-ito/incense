@@ -494,18 +494,19 @@ loss_check <- function(loss,out,ref) {
     }
   } else if (loss == "crossentropy") {
     if (length(outdim) == length(refdim)+1) {
-          ncat <- outdim[2]
-          if (ref$dtype != torch::torch_long()) {
-      losserror("type",loss,out,ref)
-    }
-    aref <- as.array(ref$cpu())
-    if (any(aref < 1 | ncat < aref)) {
-      losserror("value",loss,out,ref)
-    }
-  } else if (length(outdim) == length(refdim)) {
+       ncat <- outdim[2]
+       if (ref$dtype != torch::torch_long()) {
+         losserror("type",loss,out,ref)
+       }
+       aref <- as.array(ref$cpu())
+       if (any(aref < 1 | ncat < aref)) {
+          losserror("value",loss,out,ref)
+       }
+    } else if (length(outdim) == length(refdim)) {
       if (any(outdim != refdim)) 
+        losserror("dim",loss,out,ref)
+    } else {
       losserror("dim",loss,out,ref)
-  } else {
-      losserror("dim",loss,out,ref)
+    }
   }
 }
